@@ -1,0 +1,29 @@
+Frontend approval integration changed to /api/rules/judgement endpoints with pending/approved/rejected status display and actions. Backend integration tests pass.
+
+2026-10-04 17:51 Asia/Shanghai recheck:
+- command: python -m pytest -q tests/test_tabletop_acceptance.py
+- result: 1 passed
+- command: start app.presentation.server on 127.0.0.1:8010, GET /health, POST /api/rules/query, terminate process
+- result: health status=ok; query returned 3 rule hits; process exited normally
+- command: npm --prefix frontend ci --no-audit --no-fund
+- result: blocked by repeated registry request timeouts; frontend/node_modules/.bin/tsc.cmd remains unavailable
+- conclusion: backend tabletop MVP is runtime-verified; frontend build remains environment-blocked and is explicitly reported as such
+
+Additional standalone regressions:
+- python -m tests.test_domain: passed, 13 seed rules loaded
+- python -m tests.test_rule_search: passed, ID/keyword/game filtering covered
+- python -m tests.test_e2e: passed, 6/6 checks
+- python -m compileall -q app tests: passed
+- git diff --check: passed
+- python -m pytest -q tests/test_rule_version_compare.py tests/test_tabletop_acceptance.py: 2 passed; version list endpoint and RuleVariant diff comparison verified
+- real Agent route check: POST /api/rules/agent/query with a Magic: The Gathering response question; DeepSeek HTTP 200, endpoint HTTP 200, final_text contained rule sections 307.1 and 117
+- RuleAdvisor toolkit inspection: tabletop mode registered rule_search_tool, game_knowledge_tool, compare_rule_versions_tool, create_judgement_tool, query_judgement_tool, and tabletop_task_dispatch
+- user isolation regression: acceptance creates judgement as acceptance-user and reads history with the same user_id; test passed
+- Agent judgement tools now inherit buyer_id from ShoppingContext when no fixed user is supplied; compile and tabletop regression tests passed
+- Rule retrieval regression after BM25-style scoring: python -m tests.test_rule_search passed; priority query remains top-ranked and game filtering remains correct
+- final backend regression: tests.test_domain passed; tests.test_e2e passed 6/6; compileall and diff check passed
+- optional vector enhancement contract: tests/test_rule_vector_index.py passed; fake embedding built and persisted rule_vectors.json, cosine recall returned the expected rule, while default tabletop mode remains BM25-only
+- authorized rule import contract: tests/test_rule_jsonl.py passed; JSONL loader validates rule IDs and RuleVariant records; validate_tabletop_rules CLI compiles successfully
+- offline retrieval evaluation: python -m scripts.evaluate_tabletop_retrieval; 4/4 cases passed, Recall@5=1.0 on the 13-rule demo corpus
+- compose tabletop alignment: app and worker now default TABLETOP_MODE=1 and pass TABLETOP_RULES_FILE; compose syntax remains declarative and external containers stay optional for local mode
+- Redis integration recheck: local Redis 5.x responded PONG; full app health returned HTTP 200 with redis=ok and queue=enabled after forcing redis-py RESP2 compatibility
